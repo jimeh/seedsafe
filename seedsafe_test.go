@@ -1,7 +1,7 @@
 package seedsafe
 
 import (
-	"fmt"
+	"bytes"
 	"testing"
 )
 
@@ -12,34 +12,76 @@ func TestEncryptAndDecrypt(t *testing.T) {
 	}{
 		{
 			"puck-outrage-stole-locale-brood",
-			"tundra thiamine actinium cray gushy grainy lets ruminant edging " +
-				"bunting embalm railhead purify swatch times added graham " +
-				"friction blast liniment iberian octet yank suddenly",
+			"habit flip route bus caught ribbon donkey enough feel next " +
+				"drink mansion alcohol genuine perfect digital fresh frog " +
+				"faculty then canoe absurd mouse magnet",
+		},
+		{
+			"genus-illness-catbird-fondly-axis",
+			"pizza kind pen alcohol over afraid demand gospel rotate attack " +
+				"city right safe limb give cradle lava fiber coral donor " +
+				"valve replace renew damp",
+		},
+		{
+			"calico-pressman-enrage-birch-curlicue",
+			"paper corn draft general test degree artist grow outdoor hockey " +
+				"history marriage artist exist chief jump problem hedgehog " +
+				"parrot life clutch toast river action",
+		},
+		{
+			"faculty-satisfy-exorcist-metric-manx",
+			"multiply filter tree amateur pumpkin online march illegal pact " +
+				"enjoy paper special crisp alcohol explain device whale " +
+				"sauce illness verify extend few garage oven",
 		},
 	}
 
 	for _, e := range examples {
-		encrypted, err := Encrypt([]byte(e.Text), []byte(e.Password))
+		encrypted1, err := Encrypt([]byte(e.Text), []byte(e.Password))
 		if err != nil {
 			t.Fatalf("Error during encryption: %s", err)
 		}
 
-		decrypted, err := Decrypt(encrypted, []byte(e.Password))
+		encrypted2, err := Encrypt([]byte(e.Text), []byte(e.Password))
+		if err != nil {
+			t.Fatalf("Error during encryption: %s", err)
+		}
+
+		decrypted1, err := Decrypt(encrypted1, []byte(e.Password))
 		if err != nil {
 			t.Fatalf("Error during decryption: %s", err)
 		}
 
-		fmt.Println(e.Text)
-		fmt.Println(string(encrypted))
-		fmt.Println(string(decrypted))
-
-		if string(decrypted) != e.Text {
-			t.Fatalf("\nExpected: %s\n     Got: %s", e.Text, decrypted)
+		decrypted2, err := Decrypt(encrypted2, []byte(e.Password))
+		if err != nil {
+			t.Fatalf("Error during decryption: %s", err)
 		}
 
-		if len(decrypted) != len(e.Text) {
+		if string(encrypted1) == string(encrypted2) {
+			t.Fatal("Encrypt does not create unique output each time when " +
+				"given identical inputs.")
+		}
+
+		if bytes.Contains(encrypted1, []byte(e.Text)) {
+			t.Fatal("Encrypted string contain the unencrypted string.")
+		}
+
+		if string(decrypted1) != e.Text {
+			t.Fatalf("\nExpected: %s\n     Got: %s", e.Text, decrypted1)
+		}
+
+		if len(decrypted1) != len(e.Text) {
 			t.Fatalf("\nExpected length: %d\nGot: %d",
-				len(e.Text), len(decrypted))
+				len(e.Text), len(decrypted1))
+		}
+
+		if string(decrypted2) != e.Text {
+			t.Fatalf("\nExpected: %s\n     Got: %s", e.Text, decrypted2)
+		}
+
+		if len(decrypted2) != len(e.Text) {
+			t.Fatalf("\nExpected length: %d\nGot: %d",
+				len(e.Text), len(decrypted2))
 		}
 	}
 }
