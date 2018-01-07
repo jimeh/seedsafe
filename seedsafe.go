@@ -1,7 +1,6 @@
 package seedsafe
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -12,11 +11,8 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-// Sep is the separator used to split salt and ciphertext.
-var Sep = []byte("|")
-
 // Encrypt a payload with given password.
-func Encrypt(plaintext []byte, password []byte) ([]byte, error) {
+func Encrypt(plaintext []byte, password []byte) (safe []byte, err error) {
 	salt, err := randomBytes(32)
 	if err != nil {
 		return nil, err
@@ -28,28 +24,19 @@ func Encrypt(plaintext []byte, password []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	output := base64encode(salt)
-	output = append(output, Sep...)
-	output = append(output, base64encode(ciphertext)...)
-	return output, nil
+	return renderSafe(salt, ciphertext), nil
 }
 
 // Decrypt a payload with given password.
-func Decrypt(text []byte, password []byte) ([]byte, error) {
-	separated := bytes.Split(text, Sep)
-	salt, err := base64decode(separated[0])
-	if err != nil {
-		return nil, err
-	}
-
-	ciphertext, err := base64decode(separated[1])
+func Decrypt(safe []byte, password []byte) (plaintext []byte, err error) {
+	salt, ciphertext, err := parseSafe(safe)
 	if err != nil {
 		return nil, err
 	}
 
 	key := generateKey(password, salt)
 
-	plaintext, err := decrypt(ciphertext, key)
+	plaintext, err = decrypt(ciphertext, key)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +86,28 @@ func decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 	)
 }
 
+func renderSafe(salt, ciphertext []byte) (safe []byte) {
+	safe = make([]byte, 1+len(salt)+len(ciphertext))
+	safe[0] = byte(len(salt))
+	copy(safe[1:], salt)
+	copy(safe[1+len(salt):], ciphertext)
+
+	return base64encode(safe)
+}
+
+func parseSafe(safe []byte) (salt []byte, ciphertext []byte, err error) {
+	text, err := base64decode(safe)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	saltLen := int(text[0])
+	salt = text[1 : saltLen+1]
+	ciphertext = text[saltLen+1:]
+
+	return salt, ciphertext, nil
+}
+
 func randomBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
@@ -110,7 +119,7 @@ func randomBytes(n int) ([]byte, error) {
 }
 
 func generateKey(password []byte, salt []byte) []byte {
-	return pbkdf2.Key(password, salt, 65536, 32, sha512.New)
+	return pbkdf2.Key(password, salt, 1048576, 32, sha512.New)
 }
 
 func base64encode(input []byte) []byte {
